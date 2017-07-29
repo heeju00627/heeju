@@ -18,7 +18,6 @@ from PyQt5.QtGui import QIcon
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 
 class Plot_Umatrix():
     def __init__(self, parent = None, width = 5, height = 4, dpi = 1000):
