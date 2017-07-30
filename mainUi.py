@@ -16,10 +16,6 @@ from matplotlib import style
 import tkinter as tk
 from tkinter import ttk
 
-import thread
-import os
-
-
 style.use("ggplot")
         
 exchange = "default"
@@ -42,20 +38,6 @@ def popupMsg(msg):
     
     popup.mainloop()
 
-
-#** load file **
-def loadFile():
-    
-    fileList = []
-    return fileList
-
-
-#** save file **
-def saveFile():
-    
-    pass
-
-
 #** cluster display changing **
 def changeDisplay(toWhat, pn):
     
@@ -65,18 +47,7 @@ def changeDisplay(toWhat, pn):
     exchange = toWhat
     programName = pn
 
-
-
-def tutorial():
-    pass
-
-
-
 class app(tk.Tk):
-    global data
-    global fileList
-    data = []
-    fileList = []
     
     def __init__(self, *args, **kwargs):
         
@@ -87,7 +58,6 @@ class app(tk.Tk):
         
         container = tk.Frame(self)
         container.grid(sticky="news")
-        #container.pack(side="top", fill="both", expand=True)
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
         
@@ -96,13 +66,17 @@ class app(tk.Tk):
         
         fileMenu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=fileMenu)
-        fileMenu.add_command(label="Open...",
-                             command=lambda: popupMsg("not supported just yet"))
-        fileMenu.add_command(label="Save...",
-                             command=lambda: popupMsg("not supported just yet"))
+        
+        subProjectMenu = tk.Menu(fileMenu, tearoff=0)
+        subProjectMenu.add_command(label="Load Project...",
+                                   command=lambda: popupMsg("not supported just yet"))
+        subProjectMenu.add_command(label="Save Project...",
+                                   command=lambda: popupMsg("not supported just yet"))
+        subProjectMenu.add_command(label="Close Project...",
+                                   command=lambda: popupMsg("not supported just yet"))
+        fileMenu.add_cascade(label="Project", menu=subProjectMenu)
+        
         fileMenu.add_separator()
-        fileMenu.add_command(label="Close...",
-                             command=lambda: popupMsg("not supported just yet"))  # 일부 file 닫기(목록에서 제거)
         fileMenu.add_command(label="Exit",
                              command=self.destroy)
         
@@ -128,13 +102,12 @@ class app(tk.Tk):
         helpMenu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=helpMenu)
         helpMenu.add_command(label="Tutorial",
-                             command=tutorial)
+                             command=lambda: popupMsg("not supported just yet"))
     
         tk.Tk.config(self, menu=menubar)
         
         # ** status bar **
         status = tk.Label(text="Preparing...", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-        #status.pack(side="bottom", fill="x")
         status.grid(row=1, sticky="news")
         status.grid_columnconfigure(0, weight=1)
         status.grid_columnconfigure(0, weight=1)
@@ -142,12 +115,13 @@ class app(tk.Tk):
         # ** page frame **
         self.frames = {}
 
-        for F in (StartPage, MainPage):
-            frame = F(container, self)
-            self.frames[F] = frame          
-            frame.grid(row=0, column=0, sticky="nsew")
-            frame.grid_rowconfigure(0, weight=1)
-            frame.grid_columnconfigure(0, weight=1)
+        #for F in (StartPage):
+        F = StartPage
+        frame = F(container, self)
+        self.frames[F] = frame          
+        frame.grid(row=0, column=0, sticky="nsew")
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
         
         self.show_frame(StartPage)
 
@@ -165,110 +139,30 @@ class StartPage(tk.Frame):
      
         tk.Frame.__init__(self, parent)
         
-        self.rowconfigure(0, weight=1)
-        self.rowconfigure(4, weight=1)
-        
-        for c in range(1):
-            self.columnconfigure(c, weight=1)
-        
-        label = tk.Label(self, text="Start Page")
-        label.grid(row=0)
-        label.grid_rowconfigure(0, weight=1)
-        label.grid_columnconfigure(0, weight=1)
-        #label.pack(pady=10, padx=10)
-        
-        button1 = ttk.Button(self, text="Text Page",
-                            command=lambda: controller.show_tab(MainPage, 1))
-        button1.grid(row=1)
-        button1.grid_rowconfigure(0, weight=1)
-        button1.grid_columnconfigure(0, weight=1)
-        #button1.pack()
-        
-        button2 = ttk.Button(self, text="Data Page",
-                            command=lambda: controller.show_tab(MainPage, 2))
-        button2.grid(row=2)
-        button2.grid_rowconfigure(0, weight=1)
-        button2.grid_columnconfigure(0, weight=1)
-        #button2.pack()
-        button3 = ttk.Button(self, text="Map Page",
-                            command=lambda: controller.show_tab(MainPage, 3))
-        button3.grid(row=3)
-        button3.grid_rowconfigure(0, weight=1)
-        button3.grid_columnconfigure(0, weight=1)
-        #button3.pack()
-        
-
-class MainPage(tk.Frame):
-    
-    def __init__(self, parent, controller):
-        
-        tk.Frame.__init__(self, parent)
-        
         for r in range(6):
-            self.rowconfigure(r, weight=1)    
-        for c in range(5):
-            self.columnconfigure(c, weight=1)
+            self.rowconfigure(r, weight=1)
             
-        # ** top frame **
-        top_frame = tk.Frame(self, bg="red")
-        top_frame.grid(row=0, column=0, columnspan=8, sticky="news")
-        top_frame.grid_rowconfigure(0, weight=1)
-        top_frame.grid_columnconfigure(0, weight=1)
+        for c in range(6):
+            self.columnconfigure(c, weight=2)
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(5, weight=1)
         
-        #top_frame.pack(side="top")
-        label1 = tk.Label(top_frame, text="Top Page")
-        label1.grid(row=0, column=0)
-        #label1.pack(side="left", pady=10, padx=10)        
-        
-        button1 = ttk.Button(top_frame, text="Back to Home",
-                            command=lambda: controller.show_frame(StartPage))
-        button1.grid(row=0, column=1)
-        #button1.pack(side="right")
-        
-        # ** list frame **
-        list_frame = tk.Frame(self, borderwidth=20, bg="blue")
-        list_frame.grid(row=1, column=0, rowspan=3, sticky="wens")
-        
-        for r in range(4):
-            if (r < 2):
-                list_frame.rowconfigure(r, weight=1)
-            if (r >= 2):
-                list_frame.rowconfigure(r, weight=6)
-        for c in range(2):
-            list_frame.columnconfigure(c, weight=1)
-        #list_frame.pack()
-        
-        label2 = tk.Label(list_frame, text="List")
-        label2.grid(row=0, column=0, columnspan=2, sticky="new")
-        #labe2.pack(side="top")
+        label = tk.Label(self, text="HY-SOM")
+        label.grid(row=0, column=0, columnspan=6)
+        label.grid_columnconfigure(0, weight=1)
             
-        button2 = ttk.Button(list_frame, text="Add",
-                             command=lambda: popupMsg("not supported just yet"))
-                            #command=lambda: controller.openFile())
-        button2.grid(row=1, column=0)
-        #button2.pack()
-        
-        button3 = ttk.Button(list_frame, text="Close",
-                             command=lambda: popupMsg("not supported just yet"))
-                            #command=lambda: controller.closeFile())
-        button3.grid(row=1, column=1)
-        #button3.pack()
-        
-        #self.dataCols = ('fullpath', 'type', 'size')
-        #listview = ttk.Treeview(columns=self.dataCols, displaycolumns='size')
-        listview = ttk.Treeview(list_frame)
-        listview.grid(row=2, column=0, rowspan=6, columnspan=2, sticky="news")
-        #listbox.pack(fill="y")
+        listview = ttk.Treeview(self)
+        listview.grid(row=1, rowspan=4, column=1, columnspan=4, sticky="news")
     
-        ysb = ttk.Scrollbar(listview, orient="vertical", command=listview.yview)
-        xsb = ttk.Scrollbar(listview, orient="horizontal", command=listview.xview)
+        ysb = ttk.Scrollbar(listview, orient="vertical", command = listview.yview)
+        xsb = ttk.Scrollbar(listview, orient="horizontal", command = listview.xview)
         listview['yscroll'] = ysb.set
         listview['xscroll'] = xsb.set
         
         listview.rowconfigure(0, weight=1)
         listview.columnconfigure(0, weight=1)
-        ysb.grid(row=0, column=1, sticky="ns")
-        xsb.grid(row=1, column=0, sticky="ew")
+        ysb.grid(row=0, rowspan=4, column=1, sticky="ns")
+        xsb.grid(row=4, column=0, columnspan=2, sticky="ew")
                 
         #tree["columns"]=("one","two")
         #tree.column("one", width=100 )
@@ -299,24 +193,33 @@ class MainPage(tk.Frame):
         listview.insert("", 3, "dir3", text="Dir 3")
         listview.insert("dir3", 3, text=" sub dir 3",values=("3A"," 3B"))
         
+        button1 = ttk.Button(self, text="Add" )
+        button1.grid(row=5, column=1, sticky="ew")
+        button1.grid_rowconfigure(0, weight=1)
+        button1.grid_columnconfigure(0, weight=1)
         
-        # ** property frame **
-        property_frame = tk.Frame(self, borderwidth=20, bg="green")
-        property_frame.grid(row=4, column=0, rowspan=2, sticky="wens")
-        property_frame.grid_rowconfigure(0, weight=1)
-        property_frame.grid_columnconfigure(0, weight=1)
-        #property_frame.pack()
+        button2 = ttk.Button(self, text="Convert" )
+        button2.grid(row=5, column=2, sticky="ew")
+        button2.grid_rowconfigure(0, weight=1)
+        button2.grid_columnconfigure(0, weight=1)
         
-        label3 = tk.Label(property_frame, text="Property")
-        label3.grid()
-        #labe3.pack(side="top")
+        button3 = ttk.Button(self, text="Training" )
+        button3.grid(row=5, column=3, sticky="ew")
+        button3.grid_rowconfigure(0, weight=1)
+        button3.grid_columnconfigure(0, weight=1)
+        
+        button4 = ttk.Button(self, text="Result" )
+        button4.grid(row=5, column=4, sticky="ew")
+        button4.grid_rowconfigure(0, weight=1)
+        button4.grid_columnconfigure(0, weight=1)
+        
         
         
 app = app()
 app.update_idletasks()  # Update "requested size" from geometry manager
 
-width = 1280
-height = 720
+width = 600
+height = 400
                     
 x = (app.winfo_screenwidth() - width) / 2
 y = (app.winfo_screenheight() - height) / 4
