@@ -13,17 +13,172 @@ from matplotlib.figure import Figure
 import matplotlib.animation as animation
 from matplotlib import style
 
+from threading import Thread
+
 import tkinter as tk
 from tkinter import ttk
 
-#import class_data
-#import class_project
+import class_data as datas
+import class_project as projects
+
+from minisom import MiniSom
+from numpy import genfromtxt,array,linalg,zeros,mean,std,apply_along_axis
+import numpy
 
 style.use("ggplot")
-        
-exchange = "default"
-programName = "hysom"
+    
+figure = Figure()
+a = figure.add_subplot(111)
 
+class somDialog(tk.Toplevel):
+    
+    def __init__(self):
+        
+        ## tk.Tk 초기화
+        tk.Toplevel.__init__(self)
+        
+        canvas = FigureCanvasTkAgg(figure, self)
+        canvas.show()
+        canvas.get_tk_widget().grid(sticky="news")
+        canvas._tkcanvas.grid(sticky="news")
+        
+        ##self.callback_threaded(canvas)
+        self.somButton(canvas)
+        
+    def callback_threaded(self):
+        Thread(target=self.somButton).start()
+        
+    def somButton(self, canvas):
+        
+        data = genfromtxt('iris6.csv', delimiter=',',dtype = float)
+        data = numpy.nan_to_num(data)
+        print (data)
+        data = apply_along_axis(lambda x: x/linalg.norm(x),1,data) # data normalization
+        
+        ### Initialization and training ###
+        som = MiniSom(40,40,136,sigma=1.0,learning_rate=0.5)
+        som.random_weights_init(data)
+        print("Training...")
+        som.train_random(data,10000) # random training
+        print("\n...ready!")
+        
+        ### Plotting the response for each pattern in the iris dataset ###
+        from pylab import plot,axis,show,pcolor,colorbar,bone
+        
+        bone()
+        pcolor(som.distance_map().T) # plotting the distance map as background
+        colorbar()
+        
+        target = genfromtxt('iris4_2.csv',delimiter=',',usecols=(0),dtype=int) # loadingthe labels
+        t = zeros(len(target),dtype=int)
+        print (target)
+        
+        t[target == 0] = 0
+        t[target == 1] = 1
+        t[target == 2] = 2
+        t[target == 3] = 3
+        t[target == 4] = 4
+        # use differet colors and markers for each label
+        #markers = []
+        colors = ['r','g','b','y','w']
+        
+        som.win_map(data)
+        with open('bm.txt', 'w') as f:    #making bm file
+             f.write(str(len(data))+'\n')
+             for cnt,xx in enumerate(data):
+                 win = som.winner(xx) # getting the winner
+             # palce a marker on the winning position for the sample xx
+                 a.plot(win[0]+.5,win[1]+.5,'.',markerfacecolor='None',markeredgecolor=colors[t[cnt]],markersize=1,markeredgewidth=1)
+                 f.write(str(win[0])+'\t'+str(win[1])+'\t'+str(t[cnt])+'\n')
+        
+        
+        with open('umx.txt', 'w') as f:    #making umx file
+            for cnt,xx in enumerate(data):
+             win = som.winner(xx) # getting the winner
+             # palce a marker on the winning position for the sample xx
+             a.plot(win[0]+.5,win[1]+.5,'.',markerfacecolor='None',
+                   markeredgecolor=colors[t[cnt]],markersize=1,markeredgewidth=1)
+            um=som.distance_map()
+            for i in range(40):
+                for j in range(40):
+                    f.write(str(um[i,j])+'\t')
+                f.write('\n')
+        
+        with open('class.txt', 'w') as f:    #making umx file
+            for cnt,xx in enumerate(data):
+             win = som.winner(xx) # getting the winner
+             # palce a marker on the winning position for the sample xx
+             a.plot(win[0]+.5,win[1]+.5,'.',markerfacecolor='None',
+                   markeredgecolor=colors[t[cnt]],markersize=1,markeredgewidth=1)
+             f.write(str(t[cnt]))
+        
+        f.close()
+        axis([0,som.weights.shape[0],0,som.weights.shape[1]])
+        canvas.show()                                                                          
+
+####---------------------------------------------    
+## new project dialog
+class newProjectDialog(tk.Toplevel):
+    
+    def __init__(self, controller):
+        
+        self.win = tk.Toplevel()
+        
+        ## grid 관리
+        for r in range(3):
+            self.win.rowconfigure(r, weight=1)
+            
+        for c in range(4):
+            self.win.columnconfigure(c, weight=1)
+        
+        self.label1 = tk.Label(self.win, text="프로젝트 이름")
+        self.label1.grid(row=0, column=0)
+        self.label1.grid_rowconfigure(0, weight=1)
+        self.label1.grid_columnconfigure(0, weight=1)
+        
+        self.entry1 = tk.Entry(self.win)
+        self.entry1.grid(row=0, column=1, columnspan=3, sticky="ew")
+        self.entry1.grid_rowconfigure(0, weight=1)
+        self.entry1.grid_columnconfigure(0, weight=1)
+        
+        self.label2 = tk.Label(self.win, text="프로젝트 경로")
+        self.label2.grid(row=1, column=0)
+        self.label2.grid_rowconfigure(0, weight=1)
+        self.label2.grid_columnconfigure(0, weight=1)
+        
+        self.entryText = tk.StringVar()
+        self.entry2 = tk.Entry(self.win, textvariable=self.entryText )
+        self.entry2.grid(row=1, column=1, columnspan=2, sticky="ew")
+        self.entry2.grid_rowconfigure(0, weight=1)
+        self.entry2.grid_columnconfigure(0, weight=1)
+        
+        self.button1 = ttk.Button(self.win, text="Open", command=lambda: self.loadFolder())
+        self.button1.grid(row=1, column=3)
+        self.button1.grid_rowconfigure(0, weight=1)
+        self.button1.grid_columnconfigure(0, weight=1)
+        
+        self.button2 = ttk.Button(self.win, text="Okay", command=lambda: self.onSubmit(controller, self.entry1.get(), self.entry2.get()))
+        self.button2.grid(row=2, column=0, columnspan=2)
+        self.button2.grid_rowconfigure(0, weight=1)
+        self.button2.grid_columnconfigure(0, weight=1)
+        
+        self.button3 = ttk.Button(self.win, text="Cancel", command=self.win.destroy)
+        self.button3.grid(row=2, column=2, columnspan=2)
+        self.button3.grid_rowconfigure(0, weight=1)
+        self.button3.grid_columnconfigure(0, weight=1)
+        
+        self.win.mainloop()
+        
+    def loadFolder(self):
+        foldername = tk.filedialog.askdirectory()
+        
+        if foldername:
+            self.entryText.set(foldername)
+        
+    def onSubmit(self, controller, name, path):
+        newProject = project.Project(name, path)
+        controller.projectList.append(newProject)
+        
 
 ####---------------------------------------------    
 ## 팝업 메시지
@@ -34,24 +189,11 @@ def popupMsg(msg):
     popup.wm_title("!")
     label = tk.Label(popup, text=msg)
     label.grid()
-    #label.pack(side="top", fill="x", pady=10)
     
     button1 = ttk.Button(popup, text="Okay", command=popup.destroy)
     button1.grid()
-    #button1.pack()
     
     popup.mainloop()
-
-####---------------------------------------------    
-## cluster display changing..?
-def changeDisplay(toWhat, pn):
-    
-    global exchange
-    global programName
-    
-    exchange = toWhat
-    programName = pn
-
 
 ####---------------------------------------------    
 ## app 전체 틀
@@ -61,6 +203,10 @@ class app(tk.Tk):
         
         ## tk.Tk 초기화
         tk.Tk.__init__(self, *args, **kwargs)
+        
+        ####---------------------------------------------   
+        ## 프로젝트 리스트
+        self.projectList = []
         
         ####---------------------------------------------   
         ## 아이콘, 제목
@@ -98,7 +244,7 @@ class app(tk.Tk):
                              command=self.destroy)
         
         ## Run 메뉴
-        runMenu = tk.Menu(menubar, tearoff=1)
+        runMenu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Run", menu=runMenu)
         runMenu.add_command(label="Convert(fna->lrn)",
                             command=lambda: popupMsg("not supported just yet"))
@@ -106,7 +252,7 @@ class app(tk.Tk):
                             command=lambda: popupMsg("not supported just yet"))
         
         ## Cluster 메뉴
-        clusterMenu = tk.Menu(menubar,tearoff=1)
+        clusterMenu = tk.Menu(menubar,tearoff=0)
         menubar.add_cascade(label="Cluster", menu=clusterMenu)
         clusterMenu.add_command(label="Clustering",
                                 command=lambda: popupMsg("not supported just yet"))
@@ -190,7 +336,7 @@ class StartPage(tk.Frame):
         ####---------------------------------------------   
         ## 프로젝트 리스트 관리 버튼(생성, 불러오기, 저장, 닫기)
         button1 = ttk.Button(self, text="New Project..",
-                             command=lambda: popupMsg("not supported just yet"))
+                             command=lambda: self.newProject(controller))
         button1.grid(row=1, column=1, sticky="ew")
         button1.grid_rowconfigure(0, weight=1)
         button1.grid_columnconfigure(0, weight=1)
@@ -216,7 +362,8 @@ class StartPage(tk.Frame):
         ####---------------------------------------------   
         ## 프로젝트 리스트
         choiceVar = tk.StringVar()
-        choices = ['no exist project']
+        #choices = ['no exist project']
+        choices = ['hello']
         choiceVar.set(choices[0])
         
         ## 프로젝트 리스트 선택 메뉴
@@ -240,6 +387,8 @@ class StartPage(tk.Frame):
         filelistview.columnconfigure(0, weight=1)
         ysb.grid(row=0, rowspan=3, column=1, sticky="ns")
         xsb.grid(row=2, column=0, columnspan=2, sticky="ew")
+        
+        filelistview.insert("" , 0, text="GCF_000005845.2_ASM584v2_genomic.fna", values=("fna","4590","no"))
                 
         #tree["columns"]=("one","two")
         #tree.column("one", width=100 )
@@ -289,7 +438,7 @@ class StartPage(tk.Frame):
         button6.grid_columnconfigure(0, weight=1)
         
         button7 = ttk.Button(self, text="Training",
-                             command=lambda: popupMsg("not supported just yet"))
+                             command=lambda: self.somButton())
         button7.grid(row=6, column=3, sticky="ew")
         button7.grid_rowconfigure(0, weight=1)
         button7.grid_columnconfigure(0, weight=1)
@@ -300,6 +449,15 @@ class StartPage(tk.Frame):
         button8.grid_rowconfigure(0, weight=1)
         button8.grid_columnconfigure(0, weight=1)
         
+    
+    ## 프로젝트 생성
+    def newProject(self, controller):
+        controller.projectList.append("hi")
+        
+        newProjectDialog(self)
+        
+    def somButton(self):
+        somDialog()
         
 
 app = app()

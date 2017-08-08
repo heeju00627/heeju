@@ -8,7 +8,7 @@ Created on Mon Aug  7 14:08:32 2017
 ## Data를 생성, 관리하기 위한 대단위
 ## 프로젝트 생성(폴더) -> fna 파일 추가 -> 저장으로 진행
 ## (status : 1 -> 2 -> 3단계)
-class Project:
+class Project():
     
     def __init__ (self, name, path):
         ## 프로젝트 이름
@@ -26,5 +26,5 @@ class Project:
     ####---------------------------------------------
     ## fna 파일 리스트 추가
     def addFna():
-        break
+        pass
     
