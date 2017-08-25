@@ -15,106 +15,19 @@ from matplotlib import style
 
 from threading import Thread
 
+from queue import Queue
+
 import tkinter as tk
 from tkinter import ttk
 
 import class_data as datas
 import class_project as projects
+import class_som as somsom
 
 from minisom import MiniSom
 from numpy import genfromtxt,array,linalg,zeros,mean,std,apply_along_axis
 import numpy
 
-style.use("ggplot")
-    
-figure = Figure()
-a = figure.add_subplot(111)
-
-class somDialog(tk.Toplevel):
-    
-    def __init__(self):
-        
-        ## tk.Tk 초기화
-        tk.Toplevel.__init__(self)
-        
-        canvas = FigureCanvasTkAgg(figure, self)
-        canvas.show()
-        canvas.get_tk_widget().grid(sticky="news")
-        canvas._tkcanvas.grid(sticky="news")
-        
-        ##self.callback_threaded(canvas)
-        self.somButton(canvas)
-        
-    def callback_threaded(self):
-        Thread(target=self.somButton).start()
-        
-    def somButton(self, canvas):
-        
-        data = genfromtxt('iris6.csv', delimiter=',',dtype = float)
-        data = numpy.nan_to_num(data)
-        print (data)
-        data = apply_along_axis(lambda x: x/linalg.norm(x),1,data) # data normalization
-        
-        ### Initialization and training ###
-        som = MiniSom(40,40,136,sigma=1.0,learning_rate=0.5)
-        som.random_weights_init(data)
-        print("Training...")
-        som.train_random(data,10000) # random training
-        print("\n...ready!")
-        
-        ### Plotting the response for each pattern in the iris dataset ###
-        from pylab import plot,axis,show,pcolor,colorbar,bone
-        
-        bone()
-        pcolor(som.distance_map().T) # plotting the distance map as background
-        colorbar()
-        
-        target = genfromtxt('iris4_2.csv',delimiter=',',usecols=(0),dtype=int) # loadingthe labels
-        t = zeros(len(target),dtype=int)
-        print (target)
-        
-        t[target == 0] = 0
-        t[target == 1] = 1
-        t[target == 2] = 2
-        t[target == 3] = 3
-        t[target == 4] = 4
-        # use differet colors and markers for each label
-        #markers = []
-        colors = ['r','g','b','y','w']
-        
-        som.win_map(data)
-        with open('bm.txt', 'w') as f:    #making bm file
-             f.write(str(len(data))+'\n')
-             for cnt,xx in enumerate(data):
-                 win = som.winner(xx) # getting the winner
-             # palce a marker on the winning position for the sample xx
-                 a.plot(win[0]+.5,win[1]+.5,'.',markerfacecolor='None',markeredgecolor=colors[t[cnt]],markersize=1,markeredgewidth=1)
-                 f.write(str(win[0])+'\t'+str(win[1])+'\t'+str(t[cnt])+'\n')
-        
-        
-        with open('umx.txt', 'w') as f:    #making umx file
-            for cnt,xx in enumerate(data):
-             win = som.winner(xx) # getting the winner
-             # palce a marker on the winning position for the sample xx
-             a.plot(win[0]+.5,win[1]+.5,'.',markerfacecolor='None',
-                   markeredgecolor=colors[t[cnt]],markersize=1,markeredgewidth=1)
-            um=som.distance_map()
-            for i in range(40):
-                for j in range(40):
-                    f.write(str(um[i,j])+'\t')
-                f.write('\n')
-        
-        with open('class.txt', 'w') as f:    #making umx file
-            for cnt,xx in enumerate(data):
-             win = som.winner(xx) # getting the winner
-             # palce a marker on the winning position for the sample xx
-             a.plot(win[0]+.5,win[1]+.5,'.',markerfacecolor='None',
-                   markeredgecolor=colors[t[cnt]],markersize=1,markeredgewidth=1)
-             f.write(str(t[cnt]))
-        
-        f.close()
-        axis([0,som.weights.shape[0],0,som.weights.shape[1]])
-        canvas.show()                                                                          
 
 ####---------------------------------------------    
 ## new project dialog
@@ -274,10 +187,12 @@ class app(tk.Tk):
         
         ####---------------------------------------------   
         ## 상태바
-        status = tk.Label(text="Preparing...", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-        status.grid(row=1, sticky="news")
-        status.grid_columnconfigure(0, weight=1)
-        status.grid_columnconfigure(0, weight=1)
+        status = tk.StringVar()
+        
+        statusbar = tk.Label(text="Preparing...", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        statusbar.grid(row=1, sticky="news")
+        statusbar.grid_columnconfigure(0, weight=1)
+        statusbar.grid_columnconfigure(0, weight=1)
         
         ####---------------------------------------------   
         ## 프레임 관리
@@ -438,7 +353,7 @@ class StartPage(tk.Frame):
         button6.grid_columnconfigure(0, weight=1)
         
         button7 = ttk.Button(self, text="Training",
-                             command=lambda: self.somButton())
+                             command=lambda: self.callback_threaded())
         button7.grid(row=6, column=3, sticky="ew")
         button7.grid_rowconfigure(0, weight=1)
         button7.grid_columnconfigure(0, weight=1)
@@ -449,6 +364,8 @@ class StartPage(tk.Frame):
         button8.grid_rowconfigure(0, weight=1)
         button8.grid_columnconfigure(0, weight=1)
         
+        self.training_count = 0
+        self.result_count = 0
     
     ## 프로젝트 생성
     def newProject(self, controller):
@@ -456,23 +373,50 @@ class StartPage(tk.Frame):
         
         newProjectDialog(self)
         
+            
+    ####---------------------------------------------   
+    ## THREAD 생성
+    def callback_threaded(self):
+        
+        self.thread = Thread(target=self.somButton)
+        self.thread.daemon = True
+        self.thread.start()
+        
+        
     def somButton(self):
-        somDialog()
         
-
-app = app()
-app.update_idletasks()  # Update "requested size" from geometry manager
-
-width = 600
-height = 400
-                    
-x = (app.winfo_screenwidth() - width) / 2
-y = (app.winfo_screenheight() - height) / 4
+        ap2p = somsom.Som()
+        ap2p.update_idletasks()  # Update "requested size" from geometry manager
+        
+        width = 600
+        height = 400
+                            
+        x = (ap2p.winfo_screenwidth() - width) / 2
+        y = (ap2p.winfo_screenheight() - height) / 4
+            
+        ap2p.geometry("%dx%d+%d+%d" %(width, height, x/2, y/2))
+        ap2p.resizable(0, 0)
+                
+        ap2p.grid_rowconfigure(0, weight=1)
+        ap2p.grid_columnconfigure(0, weight=1)
+        
+        ap2p.mainloop()
+            
+            
+if __name__ == '__main__':
+    app = app()
+    app.update_idletasks()  # Update "requested size" from geometry manager
     
-app.geometry("%dx%d+%d+%d" %(width, height, x, y))
-app.resizable(0, 0)
+    width = 600
+    height = 400
+                        
+    x = (app.winfo_screenwidth() - width) / 2
+    y = (app.winfo_screenheight() - height) / 4
         
-app.grid_rowconfigure(0, weight=1)
-app.grid_columnconfigure(0, weight=1)
-
-app.mainloop()
+    app.geometry("%dx%d+%d+%d" %(width, height, x, y))
+    app.resizable(0, 0)
+            
+    app.grid_rowconfigure(0, weight=1)
+    app.grid_columnconfigure(0, weight=1)
+    
+    app.mainloop()
