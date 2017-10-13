@@ -5,6 +5,8 @@ Created on Mon Jul 31 02:30:51 2017
 @author: heeju
 """
 
+import os
+
 ## 다수의 fna 집합 -> lrn, names -> bm, umx, wts, cls로 진행되는 일련의 data
 ## (status : 1 -> 2 -> 3단계)
 class Data:
@@ -14,11 +16,13 @@ class Data:
         ## fna 파일 갯수
         self.count = count
         ## fna 파일 경로
-        self.fileList = []
+        self.fileList = {}
+        ## 지워진 파일 이름
+        self.delfileList = []
         
         if (fileList.index != 0):
             for f in fileList:
-                self.fileList.append(f)
+                self.fileList[os.path.splitext(f)[1]] = f
                 
             ## fna 파일 로드 완료
             self.status = 1
@@ -131,5 +135,5 @@ class Data:
             
                 
                 
-data = Data(2, 'GCF_000005845.2_ASM584v2_genomic.fna', 'contig0.fna')
-data.convertTOlrn('dd')
+#data = Data(2, 'GCF_000005845.2_ASM584v2_genomic.fna', 'contig0.fna')
+#data.convertTOlrn('dd')

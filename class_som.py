@@ -37,7 +37,7 @@ def popupMsg(msg):
     label = tk.Label(popup, text=msg)
     label.grid()
     
-    button1 = ttk.Button(popup, text="Okay", command=popup.destroy)
+    button1 = ttk.Button(popup, text="Ok", command=popup.destroy)
     button1.grid()
     
     popup.mainloop()
